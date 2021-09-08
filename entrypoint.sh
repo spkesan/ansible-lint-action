@@ -71,11 +71,6 @@ parse_args() {
   return 0
 }
 
-override_python_packages() {
-  [[ -n "${OVERRIDE-}" ]] && pip install ${OVERRIDE} && pip check
-  >&2 echo "Completed installing override dependencies..."
-}
-
 # Generates client.
 # args:
 #   $@: additional options
@@ -86,7 +81,18 @@ ansible::lint() {
   : "${GITHUB_WORKSPACE?GITHUB_WORKSPACE has to be set. Did you use the actions/checkout action?}"
   pushd "${GITHUB_WORKSPACE}"
 
-  override_python_packages
+  # Packages to install
+  PACKAGES_TO_INSTALL="$OVERRIDE"
+
+  # Add ansible-lint to the list of packages to install if not specified in override-deps
+  if [[ $PACKAGES_TO_INSTALL != *"ansible-lint"* ]]; then
+    PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL ansible-lint"
+  fi
+
+  # Install packages
+  [[ -n "${PACKAGES_TO_INSTALL-}" ]] && pip install ${PACKAGES_TO_INSTALL} && pip check
+  >&2 echo "Completed installing dependencies..."
+
   local opts
   opts=$(parse_args $@ || exit 1)
 
